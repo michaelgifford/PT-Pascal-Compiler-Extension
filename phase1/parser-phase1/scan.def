@@ -1,0 +1,123 @@
+	{ Semantic Operations }
+	oBufferSave = 14;
+
+	{ Input Tokens }
+	lLetter = 0;
+	firstCharClass = 0;
+	lDigit = 1;
+	lPlus = 2;
+	lMinus = 3;
+	lStar = 4;
+	lColon = 5;
+	lEquals = 6;
+	lDot = 7;
+	lComma = 8;
+	lSemicolon = 9;
+	lSlash = 10;
+	lHash = 11;
+	lExclamation = 12;
+	lAtSign = 13;
+	lQuote = 14;
+	lLeftAngle = 15;
+	lRightAngle = 16;
+	lLeftParen = 17;
+	lRightParen = 18;
+	lLeftBracket = 19;
+	lRightBracket = 20;
+	lLeftBrace = 21;
+	lRightBrace = 22;
+	lBlank = 23;
+	lIllegal = 24;
+	lNewLine = 25;
+	lTab = 26;
+	lNewPage = 27;
+	lEndFile = 28;
+	lastCharClass = 28;
+
+	{ Output Tokens }
+	pDiv = 0;
+	firstKeywordToken = 0;
+	pMod = 1;
+	pOr = 2;
+	pAnd = 3;
+	pNot = 4;
+	pElse = 5;
+	pOf = 6;
+	pArray = 7;
+	pFile = 8;
+	pPacked = 9;
+	pProgram = 10;
+	pLet = 11;
+	pVar = 12;
+	pType = 13;
+	pFunction = 14;
+	pIf = 15;
+	pCase = 16;
+	pSwitch = 17;
+	pDefault = 18;
+	pElsif = 19;
+	pLoop = 20;
+	pBreak = 21;
+	pWhen = 22;
+	pClass = 23;
+	pPublic = 24;
+	pReturn = 25;
+	lastKeywordToken = 25;
+	pIdentifier = 26;
+	firstCompoundInputToken = 26;
+	pInteger = 27;
+	pLiteral = 28;
+	lastCompoundInputToken = 28;
+	pNewLine = 29;
+	pEndFile = 30;
+	pPlus = 31;
+	pMinus = 32;
+	pStar = 33;
+	pDot = 34;
+	pComma = 35;
+	pSemicolon = 36;
+	pHash = 37;
+	pAtSign = 38;
+	pEqualsEquals = 39;
+	pColon = 40;
+	pEquals = 41;
+	pNotEqual = 42;
+	pLess = 43;
+	pLessEqual = 44;
+	pGreaterEqual = 45;
+	pGreater = 46;
+	pLeftParen = 47;
+	pRightParen = 48;
+	pLeftBracket = 49;
+	pRightBracket = 50;
+	pLeftBrace = 51;
+	pRightBrace = 52;
+	pDotDot = 53;
+	lastSyntaxToken = 53;
+
+	{ Input/Output Tokens }
+
+	{ Error Codes }
+	eIllegalChar = 5;
+	firstScanError = 5;
+	eLiteralLine = 6;
+	eLiteralEOF = 7;
+	eCommentEOF = 8;
+	eNoSeparator = 9;
+	lastScanError = 9;
+
+	{ Type Values }
+
+	{ S/SL Rule Table Addresses } {
+	Scan = 0;
+	Identifier = 252;
+	Integer = 269;
+	Literal = 284;
+	Comment = 328;
+	AlternateComment = 353;
+	}
+
+	{ S/SL Table Parameters }
+	sslTblSize = 389;
+	minSslTableValue = -32767;
+	maxSslTableValue = 32767;

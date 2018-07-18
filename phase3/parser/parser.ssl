@@ -1,0 +1,906 @@
+%  PT Parser.ssl	v1.01
+% Abstract
+%
+%     This module parses the syntax token stream emitted by the scanner
+%   and emits a postfix stream of tokens to the semantic analyzer
+%   module.  The parser detects and repairs syntax errors so that the
+%   token stream emitted to the semantic analyzer is syntactically
+%   legal (except for the special case of declaration phase errors - see
+%   comment in the Block routine below).
+
+Input :
+	% Keywords must be first both here and in stdIdentifiers,
+	% and they must appear in the same order
+
+	pDiv		'div' 
+	firstKeywordToken = pDiv
+	pMod		'mod'
+	pOr		'or'
+	pAnd		'and'
+	pNot		'not'
+%%%%%%%%%%% DELETED
+%	pThen		'then'
+%%%%%%%%%%% 
+	pElse		'else'
+	pOf		'of'
+%%%%%%%%%%% DELETED
+%	pEnd		'end'
+%	pUntil		'unti;'
+%	pDo		'do'
+%%%%%%%%%%% 
+	pArray		'array'
+	pFile		'file'
+	pPacked		'packed'
+	pProgram	'program'
+%%%%%%%%%%% CHANGED
+%	pConst		'const'
+%%%%%%%%%%% 
+	pLet		'let'
+%%%%%%%%%%% 
+	pVar		'var'
+	pType		'type'
+%%%%%%%%%%% CHANGED
+%	pProcedure	'procedure'
+%%%%%%%%%%% 
+	pFunction	'function'
+%%%%%%%%%%% 
+%%%%%%%%%%% DELETED
+%	pBegin		'begin'
+%%%%%%%%%%%
+	pIf		'if'
+	pCase		'case'
+%%%%%%%%%%% ADDED
+	pSwitch		'switch'
+	pDefault	'default'
+%%%%%%%%%%%
+%%%%%%%%%%% CHANGED
+%	pWhile		'while'
+%	pRepeat		'repeat'
+%%%%%%%%%%% 
+	pElsif		'elsif'
+	pLoop		'loop'
+	pBreak		'break'
+	pWhen		'when'
+	pClass		'class'
+	pPublic		'public'
+%%%%%%%%%%% 
+%%%%%%%%%%% ADDED 858
+	pReturn		'return'
+%%%%%%%%%%% 
+%%%%%%%%%%% CHANGED 458
+%	lastKeywordToken = pRepeat
+%%%%%%%%%%% CHANGED 858
+%	lastKeywordToken = pPublic
+%%%%%%%%%%% 
+	lastKeywordToken = pReturn
+%%%%%%%%%%% 
+
+	pIdentifier 
+	firstCompoundInputToken = pIdentifier
+	pInteger
+	pLiteral
+	lastCompoundInputToken = pLiteral
+
+	pNewLine
+	pEndFile
+	pPlus			'+'
+	pMinus			'-'
+	pStar			'*'
+%%%%%%%%%%% DELETED
+%	pColonEquals		':='
+%%%%%%%%%%% 
+	pDot			'.'
+	pComma			','
+	pSemicolon		';'
+%%%%%%%%%%% ADDED
+	pHash			'#'
+	pAtSign			'@'
+	pEqualsEquals		'=='
+%%%%%%%%%%% 
+	pColon			':'
+	pEquals			'='
+	pNotEqual		'!='
+	pLess			'<'
+	pLessEqual		'<='
+	pGreaterEqual		'>='
+	pGreater		'>'
+	pLeftParen		'('
+	pRightParen		')'
+	pLeftBracket		'['
+	pRightBracket		']'
+	pLeftBrace		'{'
+	pRightBrace		'}'
+	pDotDot			'..'
+	lastSyntaxToken = pDotDot;
+
+Output :
+	sIdentifier 
+	firstSemanticToken = sIdentifier
+	firstCompoundSemanticToken = sIdentifier
+	sInteger
+	sLiteral
+	lastCompoundSemanticToken = sLiteral
+
+	sProgram
+	sParmBegin
+	sParmEnd
+	sConst
+	sType
+	sVar
+	sProcedure
+%%%%%%%%%%% ADDED 
+	sPublic
+%%%%%%%%%%% 
+	sBegin
+	sEnd
+	sNegate
+	sArray
+	sPacked
+	sFile
+	sRange
+	sCaseStmt
+%%%%%%%%%%% ADDED 
+	sDefault
+%%%%%%%%%%% 
+	sCaseEnd
+	sLabelEnd
+	sExpnEnd
+	sNullStmt
+	sAssignmentStmt
+	sSubscript
+	sCallStmt
+	sFieldWidth
+	sIfStmt
+	sThen
+	sElse
+%%%%%%%%%%% CHANGED
+%	sWhileStmt
+%	sRepeatStmt
+%	sRepeatEnd
+%%%%%%%%%%% 
+	sClass
+	sLoopStmt
+	sLoopBreakWhen
+	sLoopEnd
+%%%%%%%%%%% 
+%%%%%%%%%%% ADDED 858 
+	sReturn
+%%%%%%%%%%% 
+	sEq
+	sNE
+	sLT
+	sLE
+	sGT
+	sGE
+	sAdd
+	sSubtract
+	sMultiply
+	sDivide
+	sModulus
+	sInfixOr
+	sOr
+	sInfixAnd
+	sAnd
+	sNot
+%%%%%%%%%%% ADDED 
+	sSubstring
+	sLength
+%%%%%%%%%%% 
+	sNewLine
+	lastSemanticToken = sNewLine;
+
+
+rules
+
+Program :
+	'program'  .sProgram
+	% program name
+	pIdentifier
+	% program parameters
+	'('
+	{
+	    pIdentifier  .sIdentifier
+	    [
+		| ',':
+		| *:
+		    >
+	    ]
+	}
+	')'
+	.sParmEnd
+%%%%%%%%%%% CHANGED
+%	';'  @Block  '.';
+%%%%%%%%%%% 
+	'{' 
+	    @Block
+	'}';
+%%%%%%%%%%% 
+
+%%%%%%%%%%% CHANGED
+% Block :
+% 	% Strictly speaking, standard Pascal requires that declarations
+% 	% appear only in the order consts, types, vars, procedures.
+% 	% We allow arbitrary intermixing of these instead to preserve
+% 	% programmer sanity.
+% 	{[
+% 	    | 'const':
+% 		.sConst
+% 		@ConstantDefinitions
+% 	    | 'type':
+% 		.sType
+% 		@TypeDefinitions
+% 	    | 'var':
+% 		.sVar
+% 		@VariableDeclarations
+% 	    | 'procedure':
+% 		.sProcedure
+% 		% procedure name
+% 		pIdentifier  .sIdentifier
+% 		@ProcedureHeading
+% 		@Block  ';'
+% 	    | *:
+% 		>
+% 	]}
+% 	'begin'
+% 	@BeginStmt;
+%%%%%%%%%%% 
+Block :
+	@Declarations
+	@Statements;
+
+Declarations:
+	% Strictly speaking, standard Pascal requires that declarations
+	% appear only in the order consts, types, vars, procedures.
+	% We allow arbitrary intermixing of these instead to preserve
+	% programmer sanity.
+	{[
+	    | 'let':
+		.sConst
+		@ConstantDefinition
+	    | 'type':
+		.sType
+		@TypeDefinition
+	    | 'var':
+		.sVar
+		@VariableDeclarations
+	    | 'public':
+	    	'function'
+		.sProcedure
+		% procedure name
+		pIdentifier  .sIdentifier
+		.sPublic
+		@ProcedureHeading
+		'{'
+		    @Block  
+%%%%%%%%%%% ADDED 858 
+		    [
+			| 'return':
+			    .sReturn '(' @Expression .sExpnEnd ')' ';' 
+			| *:
+		    ]
+%%%%%%%%%%% END 858 
+		'}'
+	    | 'function':
+		.sProcedure
+		% procedure name
+		pIdentifier  .sIdentifier
+		@ProcedureHeading
+		'{'
+		    @Block  
+%%%%%%%%%%% ADDED 858 
+		    [
+			| 'return':
+			    .sReturn '(' @Expression .sExpnEnd  ')' ';'
+			| *:
+		    ]
+%%%%%%%%%%% END 858 
+		'}'
+	    | 'class':
+		.sClass
+		pIdentifier .sIdentifier 
+		'{'
+		    @Block
+		'}'
+	    | ';':
+		% null declaration
+	    | *:
+		>
+	]};
+%%%%%%%%%%% 
+
+%%%%%%%%%%% CHANGED
+% ConstantDefinitions :
+% 	% Accept one or more named constant definitions
+% 	pIdentifier  .sIdentifier
+% 	@ConstantValue
+% 	{[
+% 	    | pIdentifier:
+% 		.sIdentifier
+% 		@ConstantValue
+% 	    | *:
+% 		>
+% 	]};
+%%%%%%%%%%% 
+ConstantDefinition :
+	% Accept a named constant
+	pIdentifier  .sIdentifier
+	@ConstantValue;
+%%%%%%%%%%% 
+
+ConstantValue :
+	'='
+	[
+	    | pInteger:
+		.sInteger
+	    | pIdentifier:
+		.sIdentifier
+	    | '-':
+		@UnsignedIntegerConstant
+		.sNegate
+	    | '+':
+		@UnsignedIntegerConstant
+	    | pLiteral:
+		.sLiteral
+	]
+	';' ;
+
+UnsignedIntegerConstant :
+	[
+	    | pIdentifier:
+		.sIdentifier
+	    | pInteger:
+		.sInteger
+	];
+
+%%%%%%%%%%% CHANGED
+% TypeDefinitions :
+% 	% Accept one or more named type definitions.
+% 	pIdentifier  .sIdentifier
+% 	'='  @TypeBody  ';'
+% 	{[
+% 	    | pIdentifier:
+% 		.sIdentifier
+% 		'='  @TypeBody  ';'
+% 	    | *:
+% 		>
+% 	]};
+%%%%%%%%%%% 
+TypeDefinition :
+	% Accept a named type definiion
+	pIdentifier  .sIdentifier
+	':'  @TypeBody ';';
+%%%%%%%%%%% 
+
+TypeBody :
+	[
+	    | 'packed':
+		'array'  .sArray  .sPacked
+		'['  @SimpleType  ']'
+		'of'  @SimpleType
+	    | 'array':
+		.sArray
+		'['  @SimpleType  ']'
+		'of'  @SimpleType
+	    | 'file':
+		.sFile
+		'of'  @SimpleType
+	    | *:
+		@SimpleType
+	];
+
+SimpleType :
+	% A simple type is a named type (possibly predefined)
+	% or a subrange type specification
+	[
+	    | pIdentifier:
+		.sIdentifier
+		[
+		    | '..':
+			.sRange		%% this may be unnecessary
+			@OptionallySignedIntegerConstant
+		    | *:
+		]
+	    | *:
+		@OptionallySignedIntegerConstant
+		'..'  .sRange
+		@OptionallySignedIntegerConstant
+	];
+
+OptionallySignedIntegerConstant :
+	[
+	    | '-':
+		@UnsignedIntegerConstant
+		.sNegate
+	    | '+':
+		@UnsignedIntegerConstant
+	    | *:
+		@UnsignedIntegerConstant
+	];
+
+%%%%%%%%%%% CHANGED
+% VariableDeclarations :
+% 	% Accept one or more variable declarations.
+% 	pIdentifier  .sIdentifier
+% 	':'  @TypeBody  ';'
+% 	{[
+% 	    | pIdentifier:
+% 		.sIdentifier
+% 		':'  @TypeBody  ';'
+% 	    | *:
+% 		>
+% 	]};
+%%%%%%%%%%% 
+VariableDeclarations :
+	% Accept one or more variable declarations.
+	pIdentifier  .sIdentifier
+	{[
+	    | ',':
+		pIdentifier .sVar .sIdentifier
+	    | *:
+		>
+	]}
+	':'  @TypeBody ';';
+%%%%%%%%%%% 
+
+ProcedureHeading :
+	@ProcedureParameters 
+	[
+	    | ':':
+		pIdentifier .sIdentifier
+	    | *:
+	];
+
+ProcedureParameters:
+	% Accept zero or more procedure formal parameter declarations.
+%%%%%%%%%%% CHANGED
+%	[
+%	    | '(':
+%%%%%%%%%%% 
+	'('
+%%%%%%%%%%% 
+	[
+	    | ')':
+	    | *:
+	        {
+		    % formal parameter identifier
+		    [
+			| 'var':
+			    pIdentifier  .sIdentifier
+			    .sVar
+			| *:
+			    pIdentifier  .sIdentifier
+		    ]
+		    ':'
+		    % type identifier
+		    pIdentifier  .sIdentifier
+		    [
+%%%%%%%%%%% CHANGED
+%			| ';':
+%%%%%%%%%%% 
+			| ',':
+%%%%%%%%%%% 
+			| *:
+			    >
+		    ]
+		}
+		')'
+%%%%%%%%%%% DELETED
+%	    | *:
+%%%%%%%%%%% 
+	]
+%%%%%%%%%%% DELETED
+%	';'
+%%%%%%%%%%% 
+	.sParmEnd;
+
+%%%%%%%%%%% CHANGED
+% Statement :
+% 	[
+% 	    | pIdentifier:
+% 		@AssignmentOrCallStmt
+% 	    | 'begin':
+% 		@BeginStmt
+% 	    | 'if':
+% 		@IfStmt
+% 	    | 'while':
+% 		@WhileStmt
+% 	    | 'case':
+% 		@CaseStmt
+% 	    | 'repeat':
+% 		@RepeatStmt
+% 	    | *:
+% 		.sNullStmt
+% 	];
+%%%%%%%%%%% 
+Statement:
+    [
+	| pIdentifier:
+	    @AssignmentOrCallStmt ';'
+	| 'if':
+	    @IfStmt
+	| 'switch':
+	    @CaseStmt
+	| 'loop':
+	    @LoopStmt
+	| '{':
+		@Statements
+	    '}'
+	| ';':
+	    .sNullStmt
+    ];
+
+Statements :
+	.sBegin
+	{[
+	    | pIdentifier:
+		@AssignmentOrCallStmt ';'
+	    | 'if':
+		@IfStmt
+	    | 'switch':
+		@CaseStmt
+	    | 'loop':
+		@LoopStmt
+	    | '{':
+		    @Statements
+		'}'
+	    | ';':
+		.sNullStmt
+	    | *:
+		>
+	]}
+	.sEnd;
+%%%%%%%%%%% 
+
+AssignmentOrCallStmt :
+	[
+%%%%%%%%%%% CHANGED 
+%	    | ':=':
+%%%%%%%%%%% 
+	    | '=':
+%%%%%%%%%%% 
+		.sAssignmentStmt
+		.sIdentifier	% identifier accepted in the Statement rule
+		@Expression
+		.sExpnEnd
+	    | '[':
+		.sAssignmentStmt
+		.sIdentifier
+		.sSubscript
+		@Expression
+		.sExpnEnd
+%%%%%%%%%%% CHANGED 
+%		']'  ':='
+%%%%%%%%%%%
+		']'  '='
+%%%%%%%%%%%
+		@Expression
+		.sExpnEnd
+	    | *:
+		@CallStmt
+	];
+
+CallStmt :
+	.sCallStmt
+	.sIdentifier	% procedure identifier accepted in the Statement rule
+	% accept zero or more actual parameters
+%%%%%%%%%%% CHANGED 
+%	[
+%	    | '(':
+%%%%%%%%%%% 
+	'('
+	[
+	    | ')':
+	    | *:
+%%%%%%%%%%% 
+		{
+		    @Expression
+		    .sExpnEnd
+		    % allow a field width specification to occur in calls
+		    % to the standard procedures write and writeln
+		    [
+			| ':':
+			    .sFieldWidth
+			    @Expression
+			    .sExpnEnd
+			| *:
+		    ]
+		    [
+			| ',':
+			| *:
+			    >
+		    ]
+		}
+		')'
+%%%%%%%%%%% CHANGED 
+%	    | *:	% no actual parameters
+%	]
+%%%%%%%%%%% 
+	]
+%%%%%%%%%%% 
+	.sParmEnd;
+
+%%%%%%%%%%% DELETED
+% BeginStmt :
+% 	.sBegin
+% 	{
+% 	    @Statement
+% 	    [
+% 		| ';':
+% 		| 'end':
+% 		    .sEnd
+% 		    >
+% 	    ]
+% 	};
+%%%%%%%%%%% 
+
+IfStmt :
+	.sIfStmt
+%%%%%%%%%%% CHANGED
+%	@Expression 
+%	.sExpnEnd
+%	'then'  .sThen
+%%%%%%%%%%% 
+	'(' @Expression ')'
+	.sExpnEnd
+	.sThen
+%%%%%%%%%%%
+	@Statement
+	[
+%%%%%%%%%%% ADDED
+	    | 'elsif':
+		.sElse
+		@IfStmt
+%%%%%%%%%%% 
+	    | 'else':
+		.sElse
+		@Statement
+	    | *:
+	];
+
+CaseStmt :
+	.sCaseStmt
+%%%%%%%%%%% CHANGED
+%	@Expression
+%	.sExpnEnd
+%	'of'
+%%%%%%%%%%% 
+	'(' @Expression ')'
+	.sExpnEnd
+	'{'
+%%%%%%%%%%%
+	{[
+%%%%%%%%%%% CHANGED
+% 	    | ';':
+% 		% since case alternatives cannot be null, allow
+% 		% for the common situation of an extra semicolon
+% 		% at the end of the list of case alternatives.
+% 		[
+% 		    | 'end':
+% 			>
+% 		    | *:
+% 			@CaseAlternative
+% 		]
+%	    | 'end':
+%		>
+%%%%%%%%%%% 
+	    | 'case':
+		@CaseAlternative
+	    | *:
+		>
+%%%%%%%%%%% 
+	]}
+%%%%%%%%%%% ADDED
+	[
+	    | 'default' :
+		.sDefault
+		':' @Statements
+		'break' ';'
+	    | *:
+	]
+%%%%%%%%%%% 
+%%%%%%%%%%% CHANGED
+%	'end' 
+%%%%%%%%%%% 
+	'}'
+%%%%%%%%%%% 
+	.sCaseEnd;
+
+CaseAlternative :
+	% A case alternative is a statement labelled by
+	% one or more optionally signed integer constants
+
+%%%%%%%%%%% CHANGED
+%	{
+%	    @OptionallySignedIntegerConstant
+%	    [
+%		| ',':
+%		| *:
+%		    >
+%	    ]
+%	}
+%%%%%%%%%%% 
+	@OptionallySignedIntegerConstant ':'
+	{[
+	    | 'case':
+		@OptionallySignedIntegerConstant ':'
+	    | *:
+		>
+	]}
+%%%%%%%%%%% 
+	.sLabelEnd
+%%%%%%%%%%% CHANGED
+%	':'  @Statement;
+%%%%%%%%%%% 
+	@Statements
+	'break' ';';
+%%%%%%%%%%% 
+
+%%%%%%%%%%% CHANGED
+% WhileStmt :
+%	.sWhileStmt
+%	@Expression
+%	.sExpnEnd
+%	'do'
+% 	@Statement;
+%	'end';
+%
+% RepeatStmt :
+% 	.sRepeatStmt
+% 	{
+% 	    @Statement
+% 	    [
+% 		| ';':
+% 		| 'until':
+% 		    .sRepeatEnd
+% 		    >
+% 	    ]
+% 	}
+% 	.sExpnEnd;
+%%%%%%%%%%% 
+LoopStmt :
+	.sLoopStmt
+	'{'
+	@Statements
+	'break' 'when' .sLoopBreakWhen '(' @Expression ')' .sExpnEnd ';'
+	@Statements
+	.sLoopEnd
+	'}'; 
+%%%%%%%%%%% 
+
+Expression :
+	@SimpleExpression
+	[
+%%%%%%%%%%% CHANGED 
+%	    | '=':
+%		@SimpleExpression  .sEq
+%	    | '<>':
+%		@SimpleExpression  .sNE
+%%%%%%%%%%%
+	    | '==':
+		@SimpleExpression  .sEq
+	    | '!=':
+		@SimpleExpression  .sNE
+%%%%%%%%%%%
+	    | '<':
+		@SimpleExpression  .sLT
+	    | '<=':
+		@SimpleExpression  .sLE
+	    | '>':
+		@SimpleExpression  .sGT
+	    | '>=':
+		@SimpleExpression  .sGE
+	    | *:
+	];
+
+SimpleExpression :
+	[
+	    | '+':
+		@Term
+	    | '-':
+		@Term  .sNegate
+	    | *:
+		@Term
+	]
+	{[
+	    | '+':
+		@Term  .sAdd
+	    | '-':
+		@Term  .sSubtract
+	    | 'or':
+		.sInfixOr  @Term  .sOr
+	    | *:
+		>
+	]};
+
+Term :
+	@Factor
+	{[
+	    | '*':
+		@Factor  .sMultiply
+	    | 'div':
+		@Factor  .sDivide
+	    | 'mod':
+		@Factor  .sModulus
+	    | 'and':
+		.sInfixAnd  @Factor  .sAnd
+	    | *:
+		>
+	]};
+
+%%%%%%%%%%% CHANGED
+% Factor :
+%%%%%%%%%%% 
+Factor :
+	@SubFactor
+	{[
+	    | '@':
+		@SubFactor ':' @Subfactor .sSubstring
+	    | *:
+		>
+	]};
+
+SubFactor :
+%%%%%%%%%%% 
+	[
+	    | pIdentifier:
+		.sIdentifier
+		@IdentifierExtension
+	    | pInteger:
+		.sInteger
+	    | '(':
+		@Expression  ')'
+	    | 'not':
+%%%%%%%%%%% CHANGED
+%		@Factor
+%%%%%%%%%%% 
+		@SubFactor
+%%%%%%%%%%% 
+		.sNot
+%%%%%%%%%%% ADDED
+	    | '#':
+		@SubFactor
+		.sLength
+%%%%%%%%%%% 
+	    | pLiteral:
+		.sLiteral
+	    | 'file':
+		.sFile '(' @Expression ')'
+		.sExpnEnd
+	];
+
+IdentifierExtension :
+	% Handle subscripts and function actual parameter lists
+	[
+	    | '[':
+		.sSubscript
+		@Expression  ']'
+		.sExpnEnd
+%%%%%%%%%%% CHANGED 858
+%	    | '(':
+%		.sParmBegin
+%		@Expression  ')'
+%		.sExpnEnd
+%		.sParmEnd
+%%%%%%%%%%% 
+	    | '(':
+		[
+		    | ')':
+		    | *:
+			.sParmBegin
+			{
+			    @Expression
+			    .sExpnEnd
+			    [
+				| ',':
+				| *:
+				    >
+			    ]
+			}
+			')'
+			.sParmEnd
+		]
+%%%%%%%%%%% END 858
+	    | *:
+	];
+
+end

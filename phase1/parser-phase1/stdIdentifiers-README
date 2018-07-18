@@ -1,0 +1,16 @@
+Form of the stdIdentifiers file
+
+The stdIdentifiers file has a strict form, as follows:
+
+1. Entries are one per line, containing the characters
+   of the identifer only, no blanks, tabs or comments.
+
+2. All keywords must appear first, in the same order as
+   the keyword tokens in parser.ssl
+
+3. Following the keywords, the predefined identifiers appear,
+   in the same order as the predefined identifier type 
+   definition in semantic.ssl
+
+4. "input" and "output" are special, and must be the last
+   two lines in the file.
